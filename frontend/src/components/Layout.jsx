@@ -1,61 +1,68 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import toast from 'react-hot-toast';
+import { useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 
-const agentNav = [
-  { to: '/agent', label: 'Dashboard', end: true },
-  { to: '/agent/farmers/new', label: 'Register Farmer' },
-  { to: '/agent/listings/new', label: 'Create Listing' },
-  { to: '/agent/listings', label: 'My Listings' },
-  { to: '/agent/orders', label: 'Orders' },
-];
-
-const buyerNav = [
-  { to: '/browse', label: 'Browse Produce' },
-  { to: '/buyer', label: 'Dashboard', end: true },
-  { to: '/buyer/orders', label: 'My Orders' },
-  { to: '/buyer/subscriptions', label: 'Subscriptions' },
-];
-
-const adminNav = [
-  { to: '/admin', label: 'Dashboard', end: true },
-  { to: '/admin/prices', label: 'Market Prices' },
-];
-
-export default function Layout({ role }) {
-  const { user, logout } = useAuth();
+export default function Layout({ navLinks = [] }) {
+  const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  const nav = role === 'agent' ? agentNav : role === 'admin' ? adminNav : buyerNav;
 
   const handleLogout = () => {
     logout();
-    toast.success('Logged out');
     navigate('/login');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="flex h-screen bg-gray-900">
       {/* Sidebar */}
-      <aside className="w-64 bg-green-800 text-white flex flex-col min-h-screen">
-        <div className="p-6 border-b border-green-700">
-          <h1 className="text-2xl font-bold">Okave</h1>
-          <p className="text-green-300 text-sm mt-1">{user?.name}</p>
-          <span className="inline-block bg-green-600 text-xs px-2 py-0.5 rounded mt-1">{user?.role}</span>
+      <aside className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
+        {/* Logo */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">O</span>
+            </div>
+            <div>
+              <p className="text-white font-bold text-lg leading-none">Okave</p>
+              <p className="text-gray-400 text-xs">Farm-to-Market</p>
+            </div>
+          </div>
         </div>
-        <nav className="flex-1 p-4 space-y-1">
-          {nav.map(({ to, label, end }) => (
-            <NavLink key={to} to={to} end={end}
+
+        {/* User Info */}
+        {user && (
+          <div className="p-4 border-b border-gray-700">
+            <p className="text-white text-sm font-medium">{user.name || user.email}</p>
+            <span className="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded mt-1 inline-block">
+              {user.role}
+            </span>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <nav className="flex-1 p-3">
+          {navLinks.map(({ to, label }) => (
+            <NavLink
+              key={to}
+              to={to}
               className={({ isActive }) =>
-                `block px-3 py-2 rounded-lg text-sm font-medium transition ${
-                  isActive ? 'bg-green-600 text-white' : 'text-green-200 hover:bg-green-700 hover:text-white'
+                `flex items-center px-3 py-2 rounded-lg text-sm mb-1 transition-colors ${
+                  isActive
+                    ? 'bg-green-600 text-white'
+                    : 'text-green-200 hover:bg-green-700 hover:text-white'
                 }`
               }
-            >{label}</NavLink>
+            >
+              {label}
+            </NavLink>
           ))}
         </nav>
-        <div className="p-4 border-t border-green-700">
-          <button onClick={handleLogout}
-            className="w-full text-left text-green-300 hover:text-white text-sm px-3 py-2 rounded-lg hover:bg-green-700 transition">
+
+        {/* Logout */}
+        <div className="p-4 border-t border-gray-700">
+          <button
+            onClick={handleLogout}
+            className="w-full text-left text-green-300 hover:text-white text-sm px-3 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          >
             Sign Out
           </button>
         </div>
