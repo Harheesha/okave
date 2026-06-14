@@ -1,98 +1,100 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useContext } from 'react';
+import { AuthProvider, AuthContext } from './context/AuthContext';
+import Layout from './components/Layout';
 
 // Auth
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 
 // Agent
-import AgentDashboard from './pages/agent/AgentDashboard';
-import RegisterFarmer from './pages/agent/RegisterFarmer';
-import CreateListing from './pages/agent/CreateListing';
-import AgentListings from './pages/agent/AgentListings';
-import AgentOrders from './pages/agent/AgentOrders';
+import AgentDashboard from './pages/AgentDashboard';
+import RegisterFarmer from './pages/RegisterFarmer';
+import CreateListing from './pages/CreateListing';
 
 // Buyer
-import BrowseProduce from './pages/buyer/BrowseProduce';
-import ProductDetail from './pages/buyer/ProductDetail';
-import CartCheckout from './pages/buyer/CartCheckout';
-import BuyerOrders from './pages/buyer/BuyerOrders';
-import Subscriptions from './pages/buyer/Subscriptions';
-import BuyerDashboard from './pages/buyer/BuyerDashboard';
+import Marketplace from './pages/Marketplace';
+import Checkout from './pages/Checkout';
 
 // Admin
-import AdminPrices from './pages/admin/AdminPrices';
-import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 
-// Layout
-import Layout from './components/Layout';
-
-function ProtectedRoute({ children, roles }) {
-  const { user } = useAuth();
+function ProtectedRoute({ children, allowedRoles }) {
+  const { user, loading } = useContext(AuthContext);
+  if (loading) return <div className="flex items-center justify-center h-screen bg-gray-900"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div></div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/" replace />;
   return children;
 }
 
-function HomeRedirect() {
-  const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'BUYER') return <Navigate to="/browse" replace />;
-  if (user.role === 'AGENT') return <Navigate to="/agent" replace />;
-  if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
-  return <Navigate to="/browse" replace />;
+function AppRoutes() {
+  const { user } = useContext(AuthContext);
+
+  return (
+    <Routes>
+      {/* Public */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+
+      {/* Root redirect */}
+      <Route path="/" element={
+        user?.role === 'AGENT' ? <Navigate to="/agent/dashboard" replace /> :
+        user?.role === 'BUYER' ? <Navigate to="/buyer/marketplace" replace /> :
+        user?.role === 'ADMIN' ? <Navigate to="/admin/dashboard" replace /> :
+        <Navigate to="/login" replace />
+      } />
+
+      {/* Agent routes */}
+      <Route path="/agent" element={
+        <ProtectedRoute allowedRoles={['AGENT']}>
+          <Layout navLinks={[
+            { to: '/agent/dashboard', label: 'Dashboard' },
+            { to: '/agent/register-farmer', label: 'Register Farmer' },
+            { to: '/agent/create-listing', label: 'Create Listing' },
+          ]} />
+        </ProtectedRoute>
+      }>
+        <Route path="dashboard" element={<AgentDashboard />} />
+        <Route path="register-farmer" element={<RegisterFarmer />} />
+        <Route path="create-listing" element={<CreateListing />} />
+      </Route>
+
+      {/* Buyer routes */}
+      <Route path="/buyer" element={
+        <ProtectedRoute allowedRoles={['BUYER']}>
+          <Layout navLinks={[
+            { to: '/buyer/marketplace', label: 'Marketplace' },
+            { to: '/buyer/checkout', label: 'Checkout' },
+          ]} />
+        </ProtectedRoute>
+      }>
+        <Route path="marketplace" element={<Marketplace />} />
+        <Route path="checkout" element={<Checkout />} />
+      </Route>
+
+      {/* Admin routes */}
+      <Route path="/admin" element={
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <Layout navLinks={[
+            { to: '/admin/dashboard', label: 'Dashboard' },
+          ]} />
+        </ProtectedRoute>
+      }>
+        <Route path="dashboard" element={<AdminDashboard />} />
+      </Route>
+
+      {/* Catch-all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Toaster position="top-right" />
-        <Routes>
-          {/* Public */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/" element={<HomeRedirect />} />
-
-          {/* Agent Routes */}
-          <Route path="/agent" element={
-            <ProtectedRoute roles={['AGENT', 'COOP_ADMIN', 'ADMIN']}>
-              <Layout role="agent" />
-            </ProtectedRoute>
-          }>
-            <Route index element={<AgentDashboard />} />
-            <Route path="farmers/new" element={<RegisterFarmer />} />
-            <Route path="listings/new" element={<CreateListing />} />
-            <Route path="listings" element={<AgentListings />} />
-            <Route path="orders" element={<AgentOrders />} />
-          </Route>
-
-          {/* Buyer Routes */}
-          <Route path="/browse" element={<BrowseProduce />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
-          <Route path="/buyer" element={
-            <ProtectedRoute roles={['BUYER']}>
-              <Layout role="buyer" />
-            </ProtectedRoute>
-          }>
-            <Route index element={<BuyerDashboard />} />
-            <Route path="checkout" element={<CartCheckout />} />
-            <Route path="orders" element={<BuyerOrders />} />
-            <Route path="subscriptions" element={<Subscriptions />} />
-          </Route>
-
-          {/* Admin Routes */}
-          <Route path="/admin" element={
-            <ProtectedRoute roles={['ADMIN']}>
-              <Layout role="admin" />
-            </ProtectedRoute>
-          }>
-            <Route index element={<AdminDashboard />} />
-            <Route path="prices" element={<AdminPrices />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
