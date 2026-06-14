@@ -1,9 +1,8 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Layout({ navLinks = [] }) {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -39,20 +38,20 @@ export default function Layout({ navLinks = [] }) {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 p-3">
-          {navLinks.map(({ to, label }) => (
+        <nav className="flex-1 p-4 space-y-1">
+          {navLinks.map((link) => (
             <NavLink
-              key={to}
-              to={to}
+              key={link.to}
+              to={link.to}
               className={({ isActive }) =>
-                `flex items-center px-3 py-2 rounded-lg text-sm mb-1 transition-colors ${
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                   isActive
                     ? 'bg-green-600 text-white'
-                    : 'text-green-200 hover:bg-green-700 hover:text-white'
+                    : 'text-gray-400 hover:bg-gray-700 hover:text-white'
                 }`
               }
             >
-              {label}
+              {link.label}
             </NavLink>
           ))}
         </nav>
@@ -61,14 +60,14 @@ export default function Layout({ navLinks = [] }) {
         <div className="p-4 border-t border-gray-700">
           <button
             onClick={handleLogout}
-            className="w-full text-left text-green-300 hover:text-white text-sm px-3 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            className="w-full text-left text-sm text-gray-400 hover:text-white px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
           >
-            Sign Out
+            Logout
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main Content */}
       <main className="flex-1 overflow-auto">
         <Outlet />
       </main>
