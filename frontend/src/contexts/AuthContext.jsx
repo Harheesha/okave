@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { authAPI } from '../lib/api';
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -42,20 +42,15 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const isAgent = user?.role === 'AGENT';
-  const isBuyer = user?.role === 'BUYER';
-  const isAdmin = user?.role === 'ADMIN';
-  const isCoopAdmin = user?.role === 'COOP_ADMIN';
-
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAgent, isBuyer, isAdmin, isCoopAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be inside AuthProvider');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  return context;
 };
