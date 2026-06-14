@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  phone         String?
+  passwordHash  String
+  role          String   // AGENT | FARMER | BUYER | COOP_ADMIN | ADMIN
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  farmerProfile   FarmerProfile?
+  buyerProfile    BuyerProfile?
+  listingsAsAgent ProduceListing[] @relation("AgentListings")
+  notifications   Notification[]
+  photos          ListingPhoto[]
+}
+
+model FarmerProfile {
+  id                     String   @id @default(uuid())
+  userId                 String?  @unique
+  user                   User?    @relation(fields: [userId], references: [id])
+  fullName               String
+  phone                  String
+  state                  String
+  lga                    String
+  community              String?
+  preferredContactChannel String  @default("SMS")
+  coopId                 String?
+  coop                   Coop?    @relation(fields: [coopId], references: [id])
+  mainCrops              String   // JSON array stored as string
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  listings  ProduceListing[] @relation("FarmerListings")
+  coopMemberships CoopMember[]
+}
+
+model Coop {
+  id                 String   @id @default(uuid())
+  name               String
+  state              String
+  lga                String
+  contactPersonName  String
+  contactPhone       String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  members   CoopMember[]
+  listings  ProduceListing[] @relation("CoopListings")
+  farmers   FarmerProfile[]
+  orders    Order[]
+}
+
+model CoopMember {
+  id        String   @id @default(uuid())
+  coopId    String
+  coop      Coop     @relation(fields: [coopId], references: [id])
+  farmerId  String
+  farmer    FarmerProfile @relation(fields: [farmerId], references: [id])
+  joinedAt  DateTime @default(now())
+}
+
+model BuyerProfile {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id])
+  buyerType  String   // HOUSEHOLD | VENDOR | RESTAURANT | RETAILER
+  address    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  orders        Order[]
+  subscriptions SubscriptionPlan[]
+}
+
+model ProduceListing {
+  id                       String   @id @default(uuid())
+  farmerId                 String?
+  farmer                   FarmerProfile? @relation("FarmerListings", fields: [farmerId], references: [id])
+  coopId                   String?
+  coop                     Coop?    @relation("CoopListings", fields: [coopId], references: [id])
+  agentId                  String
+  agent                    User     @relation("AgentListings", fields: [agentId], references: [id])
+  cropType                 String   // TOMATO | MAIZE | YAM | PEPPER | etc.
+  variety                  String?
+  quantity                 Float
+  unit                     String   // kg | basket | bag | tuber | crate
+  locationState            String
+  locationLga              String
+  harvestDate              String
+  basePricePerUnit         Float
+  suggestedMinPricePerUnit Float?
+  suggestedMaxPricePerUnit Float?
+  finalPricePerUnit        Float
+  status                   String   @default("LIVE") // DRAFT|LIVE|RESERVED|SOLD|CANCELLED
+  qualityGrade             String?  // A|B|C
+  qualityVerifiedByAgent   Boolean  @default(false)
+  qualityNotes             String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  photos  ListingPhoto[]
+  orders  Order[]
+}
+
+model MarketPriceSnapshot {
+  id                String   @id @default(uuid())
+  cropType          String
+  unit              String
+  marketLocation    String
+  minPricePerUnit   Float
+  maxPricePerUnit   Float
+  avgPricePerUnit   Float
+  source            String   @default("manual_entry")
+  recordedAt        DateTime @default(now())
+}
+
+model ListingPhoto {
+  id          String   @id @default(uuid())
+  listingId   String
+  listing     ProduceListing @relation(fields: [listingId], references: [id])
+  url         String
+  takenByUserId String
+  takenBy     User    @relation(fields: [takenByUserId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Order {
+  id              String   @id @default(uuid())
+  buyerId         String
+  buyer           BuyerProfile @relation(fields: [buyerId], references: [id])
+  listingId       String
+  listing         ProduceListing @relation(fields: [listingId], references: [id])
+  coopId          String?
+  coop            Coop?   @relation(fields: [coopId], references: [id])
+  quantity        Float
+  pricePerUnit    Float
+  totalAmount     Float
+  status          String   @default("PENDING") // PENDING|CONFIRMED|IN_TRANSIT|DELIVERED|CANCELLED
+  paymentStatus   String   @default("UNPAID")  // UNPAID|PAID|REFUNDED
+  deliveryAddress String?
+  deliveryDate    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  payment Payment?
+}
+
+model Payment {
+  id             String   @id @default(uuid())
+  orderId        String   @unique
+  order          Order    @relation(fields: [orderId], references: [id])
+  amount         Float
+  paymentMethod  String   @default("card")
+  transactionRef String   @unique
+  status         String   @default("PENDING") // PENDING|SUCCESS|FAILED
+  paidAt         DateTime?
+  createdAt      DateTime @default(now())
+}
+
+model SubscriptionPlan {
+  id               String   @id @default(uuid())
+  buyerId          String
+  buyer            BuyerProfile @relation(fields: [buyerId], references: [id])
+  label            String
+  frequency        String   // WEEKLY | MONTHLY
+  nextDeliveryDate String
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  items SubscriptionItem[]
+}
+
+model SubscriptionItem {
+  id             String   @id @default(uuid())
+  subscriptionId String
+  subscription   SubscriptionPlan @relation(fields: [subscriptionId], references: [id])
+  cropType       String
+  quantity       Float
+  unit           String
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  farmerId  String?
+  channel   String   // SMS | EMAIL | PUSH
+  message   String
+  status    String   @default("QUEUED") // QUEUED|SENT|FAILED
+  createdAt DateTime @default(now())
+  sentAt    DateTime?
+}
